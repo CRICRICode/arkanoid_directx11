@@ -1,0 +1,23 @@
+# Build outputs
+x64/
+Win32/
+Debug/
+Release/
+directx11_1/x64/
+directx11_1/Debug/
+directx11_1/Release/
+
+# Visual Studio / MSBuild
+.vs/
+*.obj
+*.idb
+*.pdb
+*.ilk
+*.tlog
+*.lastbuildstate
+*.log
+*.exe
+*.lib
+*.exp
+*.ipch
+*.idea
