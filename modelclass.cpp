@@ -1,12 +1,12 @@
-////////////////////////////////////////////////////////////////////////////////
-// Filename: modelclass.cpp
-////////////////////////////////////////////////////////////////////////////////
 #include "modelclass.h"
 #include <cmath>
 
-#ifndef XM_2PI
-#define XM_2PI 6.283185307179586476925286766559f
-#endif
+namespace
+{
+	const int CIRCLE_SEGMENTS = 32;
+	const float UNIT_HALF_SIZE = 0.5f;
+	const float TWO_PI = 6.283185307179586476925286766559f;
+}
 
 ModelClass::ModelClass()
 {
@@ -17,7 +17,6 @@ ModelClass::ModelClass()
 	m_shape = ShapeRectangle;
 }
 
-ModelClass::ModelClass(const ModelClass& other) {}
 ModelClass::~ModelClass() {}
 
 bool ModelClass::Initialize(ID3D11Device* device, ShapeType shape)
@@ -40,6 +39,30 @@ int ModelClass::GetIndexCount()
 	return m_indexCount;
 }
 
+void ModelClass::WriteVertexPositions(VertexType* vertices) const
+{
+	if (m_shape == ShapeRectangle)
+	{
+		vertices[0].position = XMFLOAT3(-UNIT_HALF_SIZE, -UNIT_HALF_SIZE, 0.0f);
+		vertices[1].position = XMFLOAT3(-UNIT_HALF_SIZE,  UNIT_HALF_SIZE, 0.0f);
+		vertices[2].position = XMFLOAT3( UNIT_HALF_SIZE,  UNIT_HALF_SIZE, 0.0f);
+		vertices[3].position = XMFLOAT3( UNIT_HALF_SIZE, -UNIT_HALF_SIZE, 0.0f);
+	}
+	else if (m_shape == ShapeCircle)
+	{
+		vertices[0].position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		for (int i = 0; i < CIRCLE_SEGMENTS; i++)
+		{
+			float angle = TWO_PI * static_cast<float>(i) / static_cast<float>(CIRCLE_SEGMENTS);
+			float x = cosf(angle) * UNIT_HALF_SIZE;
+			float y = sinf(angle) * UNIT_HALF_SIZE;
+
+			vertices[i + 1].position = XMFLOAT3(x, y, 0.0f);
+		}
+	}
+}
+
 bool ModelClass::SetColor(ID3D11DeviceContext* deviceContext, const XMFLOAT4& color)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -55,28 +78,7 @@ bool ModelClass::SetColor(ID3D11DeviceContext* deviceContext, const XMFLOAT4& co
 
 	// Con WRITE_DISCARD DirectX può scartare il contenuto precedente del buffer.
 	// Per questo riscriviamo sempre sia le posizioni sia i colori.
-	if (m_shape == ShapeRectangle)
-	{
-		verticesPtr[0].position = XMFLOAT3(-0.5f, -0.5f, 0.0f);
-		verticesPtr[1].position = XMFLOAT3(-0.5f,  0.5f, 0.0f);
-		verticesPtr[2].position = XMFLOAT3( 0.5f,  0.5f, 0.0f);
-		verticesPtr[3].position = XMFLOAT3( 0.5f, -0.5f, 0.0f);
-	}
-	else if (m_shape == ShapeCircle)
-	{
-		const int segments = 32;
-
-		verticesPtr[0].position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-		for (int i = 0; i < segments; i++)
-		{
-			float angle = XM_2PI * static_cast<float>(i) / static_cast<float>(segments);
-			float x = cosf(angle) * 0.5f;
-			float y = sinf(angle) * 0.5f;
-
-			verticesPtr[i + 1].position = XMFLOAT3(x, y, 0.0f);
-		}
-	}
+	WriteVertexPositions(verticesPtr);
 
 	for (int i = 0; i < m_vertexCount; i++)
 	{
@@ -117,10 +119,7 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device, ShapeType shape)
 			return false;
 		}
 
-		vertices[0].position = XMFLOAT3(-0.5f, -0.5f, 0.0f); // basso sinistra
-		vertices[1].position = XMFLOAT3(-0.5f,  0.5f, 0.0f); // alto sinistra
-		vertices[2].position = XMFLOAT3( 0.5f,  0.5f, 0.0f); // alto destra
-		vertices[3].position = XMFLOAT3( 0.5f, -0.5f, 0.0f); // basso destra
+		WriteVertexPositions(vertices);
 
 		// Winding orario, coerente con il rasterizer DirectX del template.
 		indices[0] = 0;
@@ -134,9 +133,8 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device, ShapeType shape)
 	{
 		// Cerchio triangolato con triangle fan convertito in triangle list.
 		// 32 segmenti bastano per pallina e modificatori piccoli.
-		const int segments = 32;
-		m_vertexCount = segments + 1;      // vertice 0 = centro, poi punti sul bordo
-		m_indexCount = segments * 3;       // un triangolo per segmento
+		m_vertexCount = CIRCLE_SEGMENTS + 1;      // vertice 0 = centro, poi punti sul bordo
+		m_indexCount = CIRCLE_SEGMENTS * 3;       // un triangolo per segmento
 
 		vertices = new VertexType[m_vertexCount];
 		if (!vertices)
@@ -151,19 +149,11 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device, ShapeType shape)
 			return false;
 		}
 
-		vertices[0].position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		WriteVertexPositions(vertices);
 
-		for (int i = 0; i < segments; i++)
+		for (int i = 0; i < CIRCLE_SEGMENTS; i++)
 		{
-			float angle = XM_2PI * static_cast<float>(i) / static_cast<float>(segments);
-			float x = cosf(angle) * 0.5f;
-			float y = sinf(angle) * 0.5f;
-			vertices[i + 1].position = XMFLOAT3(x, y, 0.0f);
-		}
-
-		for (int i = 0; i < segments; i++)
-		{
-			int next = (i + 1) % segments;
+			int next = (i + 1) % CIRCLE_SEGMENTS;
 
 			// Winding orario: centro, prossimo, corrente.
 			indices[i * 3 + 0] = 0;

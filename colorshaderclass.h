@@ -1,24 +1,10 @@
-////////////////////////////////////////////////////////////////////////////////
-// Filename: colorshaderclass.h
-////////////////////////////////////////////////////////////////////////////////
 #ifndef _COLORSHADERCLASS_H_
 #define _COLORSHADERCLASS_H_
 
-
-//////////////
-// INCLUDES //
-//////////////
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <directxmath.h>
-#include <fstream>
 using namespace DirectX;
-using namespace std;
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Class name: ColorShaderClass
-////////////////////////////////////////////////////////////////////////////////
 class ColorShaderClass
 {
 private:
@@ -31,7 +17,8 @@ private:
 
 public:
 	ColorShaderClass();
-	ColorShaderClass(const ColorShaderClass&);
+	ColorShaderClass(const ColorShaderClass&) = delete;
+	ColorShaderClass& operator=(const ColorShaderClass&) = delete;
 	~ColorShaderClass();
 
 	bool Initialize(ID3D11Device*, HWND);
@@ -39,9 +26,9 @@ public:
 	bool Render(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX);
 
 private:
-	bool InitializeShader(ID3D11Device*, HWND, WCHAR*, WCHAR*);
+	bool InitializeShader(ID3D11Device*, HWND, const WCHAR*, const WCHAR*);
 	void ShutdownShader();
-	void OutputShaderErrorMessage(ID3D10Blob*, HWND, WCHAR*);
+	void OutputShaderErrorMessage(ID3D10Blob*, HWND, const WCHAR*);
 
 	bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX);
 	void RenderShader(ID3D11DeviceContext*, int);

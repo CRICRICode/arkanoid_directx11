@@ -1,20 +1,10 @@
-////////////////////////////////////////////////////////////////////////////////
-// Filename: modelclass.h
-////////////////////////////////////////////////////////////////////////////////
 #ifndef _MODELCLASS_H_
 #define _MODELCLASS_H_
 
 #include <d3d11.h>
 #include <directxmath.h>
 using namespace DirectX;
-
-////////////////////////////////////////////////////////////////////////////////
-// Class name: ModelClass
-// Modello geometrico riutilizzabile.
-// Può creare:
-// - un rettangolo unitario 1x1 centrato nell'origine;
-// - un cerchio unitario triangolato, utile per la pallina e per i modificatori.
-////////////////////////////////////////////////////////////////////////////////
+// Modello geometrico riutilizzabile per rettangoli e cerchi unitari.
 class ModelClass
 {
 private:
@@ -33,7 +23,8 @@ public:
 
 public:
 	ModelClass();
-	ModelClass(const ModelClass&);
+	ModelClass(const ModelClass&) = delete;
+	ModelClass& operator=(const ModelClass&) = delete;
 	~ModelClass();
 
 	bool Initialize(ID3D11Device*, ShapeType shape = ShapeRectangle);
@@ -44,6 +35,7 @@ public:
 	int GetIndexCount();
 
 private:
+	void WriteVertexPositions(VertexType*) const;
 	bool InitializeBuffers(ID3D11Device*, ShapeType);
 	void ShutdownBuffers();
 	void RenderBuffers(ID3D11DeviceContext*);
