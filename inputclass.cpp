@@ -1,15 +1,12 @@
-////////////////////////////////////////////////////////////////////////////////
-// Filename: inputclass.cpp
-////////////////////////////////////////////////////////////////////////////////
 #include "inputclass.h"
 
-
-InputClass::InputClass()
+namespace
 {
+	const unsigned int KEY_COUNT = 256;
 }
 
 
-InputClass::InputClass(const InputClass& other)
+InputClass::InputClass()
 {
 }
 
@@ -21,37 +18,32 @@ InputClass::~InputClass()
 
 void InputClass::Initialize()
 {
-	int i;
-	
-
-	// Initialize all the keys to being released and not pressed.
-	for(i=0; i<256; i++)
+	for (unsigned int i = 0; i < KEY_COUNT; i++)
 	{
 		m_keys[i] = false;
 	}
-
-	return;
 }
 
 
 void InputClass::KeyDown(unsigned int input)
 {
-	// If a key is pressed then save that state in the key array.
-	m_keys[input] = true;
-	return;
+	if (input < KEY_COUNT)
+	{
+		m_keys[input] = true;
+	}
 }
 
 
 void InputClass::KeyUp(unsigned int input)
 {
-	// If a key is released then clear that state in the key array.
-	m_keys[input] = false;
-	return;
+	if (input < KEY_COUNT)
+	{
+		m_keys[input] = false;
+	}
 }
 
 
-bool InputClass::IsKeyDown(unsigned int key)
+bool InputClass::IsKeyDown(unsigned int key) const
 {
-	// Return what state the key is in (pressed/not pressed).
-	return m_keys[key];
+	return key < KEY_COUNT && m_keys[key];
 }
