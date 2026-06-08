@@ -1,6 +1,3 @@
-////////////////////////////////////////////////////////////////////////////////
-// Filename: applicationclass.h
-////////////////////////////////////////////////////////////////////////////////
 #ifndef _APPLICATIONCLASS_H_
 #define _APPLICATIONCLASS_H_
 
@@ -63,7 +60,8 @@ private:
 
 public:
 	ApplicationClass();
-	ApplicationClass(const ApplicationClass&);
+	ApplicationClass(const ApplicationClass&) = delete;
+	ApplicationClass& operator=(const ApplicationClass&) = delete;
 	~ApplicationClass();
 
 	bool Initialize(int, int, HWND);
@@ -74,25 +72,28 @@ private:
 	void InitializeGame();
 	void ResetRound();
 	void ResetBricks();
+	void ResetModifier(ActiveModifier&);
 	void ResetModifiers();
 	void UpdateGame(InputClass*, float);
 
 	void SpawnModifier(float, float);
 	void UpdateModifiers(float);
 	void ApplyModifier(ModifierType);
+	void UpdateModifierTimer(ActiveModifier&, ModifierType, float);
 	void UpdateActiveModifierTimers(float);
 	void DisableModifier(ModifierType);
 	XMFLOAT4 GetModifierColor(ModifierType) const;
 
-	bool Intersects(const RectObject&, const RectObject&) const;
 	bool IntersectsCircleRect(const BallObject&, const RectObject&) const;
+	bool IntersectsCircleRect(float, float, float, const RectObject&) const;
 	bool IntersectsModifierPaddle(const ModifierObject&, const RectObject&) const;
 	bool AreAllBricksDestroyed() const;
 
 	bool Render();
-	bool RenderRect(const RectObject&, const XMMATRIX&, const XMMATRIX&);
-	bool RenderBall(const BallObject&, const XMMATRIX&, const XMMATRIX&);
-	bool RenderModifier(const ModifierObject&, const XMMATRIX&, const XMMATRIX&);
+	XMMATRIX BuildWorldMatrix(float, float, float, float) const;
+	bool RenderModel(ID3D11DeviceContext*, ModelClass*, int, const XMFLOAT4&, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&);
+	bool RenderRect(const RectObject&, ID3D11DeviceContext*, const XMMATRIX&, const XMMATRIX&);
+	bool RenderCircle(float, float, float, const XMFLOAT4&, bool, ID3D11DeviceContext*, const XMMATRIX&, const XMMATRIX&);
 
 private:
 	D3DClass* m_Direct3D;

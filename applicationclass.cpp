@@ -1,6 +1,3 @@
-////////////////////////////////////////////////////////////////////////////////
-// Filename: applicationclass.cpp
-////////////////////////////////////////////////////////////////////////////////
 #include "applicationclass.h"
 #include <cmath>
 #include <cstdlib>
@@ -18,6 +15,8 @@ namespace
 	const float SPEED_UP_MULTIPLIER = 1.35f;
 	const float MODIFIER_DROP_SPEED = -180.0f;
 	const int MODIFIER_SPAWN_PERCENT = 25;
+	const int MIN_BRICK_COLOR_COUNT = 5;
+	const int BRICK_COLOR_COUNT = 8;
 }
 
 ApplicationClass::ApplicationClass()
@@ -44,7 +43,6 @@ ApplicationClass::ApplicationClass()
 	m_SpeedUpModifier.remainingTime = 0.0f;
 }
 
-ApplicationClass::ApplicationClass(const ApplicationClass& other) {}
 ApplicationClass::~ApplicationClass() {}
 
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
@@ -163,7 +161,6 @@ void ApplicationClass::InitializeGame()
 	m_Ball.color = XMFLOAT4(1.0f, 0.9f, 0.2f, 1.0f);
 	m_Ball.active = true;
 
-	ResetModifiers();
 	ResetBricks();
 	ResetRound();
 }
@@ -187,19 +184,18 @@ void ApplicationClass::ResetRound()
 	m_GameOver = false;
 }
 
+void ApplicationClass::ResetModifier(ActiveModifier& modifier)
+{
+	modifier.active = false;
+	modifier.remainingTime = 0.0f;
+}
+
 void ApplicationClass::ResetModifiers()
 {
-	m_BigBallModifier.active = false;
-	m_BigBallModifier.remainingTime = 0.0f;
-
-	m_UpsideDownModifier.active = false;
-	m_UpsideDownModifier.remainingTime = 0.0f;
-
-	m_LongPaddleModifier.active = false;
-	m_LongPaddleModifier.remainingTime = 0.0f;
-
-	m_SpeedUpModifier.active = false;
-	m_SpeedUpModifier.remainingTime = 0.0f;
+	ResetModifier(m_BigBallModifier);
+	ResetModifier(m_UpsideDownModifier);
+	ResetModifier(m_LongPaddleModifier);
+	ResetModifier(m_SpeedUpModifier);
 }
 
 void ApplicationClass::ResetBricks()
@@ -213,26 +209,54 @@ void ApplicationClass::ResetBricks()
 	const float gap = 8.0f;
 	const float startX = -((columns - 1) * (brickWidth + gap)) / 2.0f;
 	const float startY = 210.0f;
+	const int totalBricks = rows * columns;
 
-	XMFLOAT4 rowColors[rows] =
+	const XMFLOAT4 brickColors[BRICK_COLOR_COUNT] =
 	{
 		XMFLOAT4(0.2f, 0.6f, 1.0f, 1.0f),
 		XMFLOAT4(0.2f, 1.0f, 0.5f, 1.0f),
 		XMFLOAT4(1.0f, 0.8f, 0.2f, 1.0f),
 		XMFLOAT4(1.0f, 0.45f, 0.25f, 1.0f),
-		XMFLOAT4(0.8f, 0.35f, 1.0f, 1.0f)
+		XMFLOAT4(0.8f, 0.35f, 1.0f, 1.0f),
+		XMFLOAT4(0.1f, 0.9f, 0.9f, 1.0f),
+		XMFLOAT4(1.0f, 0.25f, 0.55f, 1.0f),
+		XMFLOAT4(0.7f, 1.0f, 0.25f, 1.0f)
 	};
+
+	std::vector<int> colorIndices;
+	colorIndices.reserve(totalBricks);
+
+	for (int i = 0; i < totalBricks; i++)
+	{
+		if (i < MIN_BRICK_COLOR_COUNT)
+		{
+			colorIndices.push_back(i);
+		}
+		else
+		{
+			colorIndices.push_back(rand() % BRICK_COLOR_COUNT);
+		}
+	}
+
+	for (int i = totalBricks - 1; i > 0; i--)
+	{
+		int randomIndex = rand() % (i + 1);
+		int temp = colorIndices[i];
+		colorIndices[i] = colorIndices[randomIndex];
+		colorIndices[randomIndex] = temp;
+	}
 
 	for (int row = 0; row < rows; row++)
 	{
 		for (int column = 0; column < columns; column++)
 		{
+			int brickIndex = row * columns + column;
 			RectObject brick;
 			brick.x = startX + column * (brickWidth + gap);
 			brick.y = startY - row * (brickHeight + gap);
 			brick.width = brickWidth;
 			brick.height = brickHeight;
-			brick.color = rowColors[row];
+			brick.color = brickColors[colorIndices[brickIndex]];
 			brick.active = true;
 			m_Bricks.push_back(brick);
 		}
@@ -243,7 +267,6 @@ void ApplicationClass::UpdateGame(InputClass* input, float deltaTime)
 {
 	if (m_GameOver)
 	{
-		// Restart manuale semplice dopo game over.
 		if (input->IsKeyDown(VK_RETURN))
 		{
 			ResetBricks();
@@ -303,7 +326,6 @@ void ApplicationClass::UpdateGame(InputClass* input, float deltaTime)
 
 	float ballRadius = m_Ball.radius;
 
-	// Pareti laterali.
 	if (m_Ball.x - ballRadius < -halfScreenWidth)
 	{
 		m_Ball.x = -halfScreenWidth + ballRadius;
@@ -315,21 +337,18 @@ void ApplicationClass::UpdateGame(InputClass* input, float deltaTime)
 		m_BallVelocityX *= -1.0f;
 	}
 
-	// Soffitto.
 	if (m_Ball.y + ballRadius > halfScreenHeight)
 	{
 		m_Ball.y = halfScreenHeight - ballRadius;
 		m_BallVelocityY *= -1.0f;
 	}
 
-	// Fondo: una sola vita.
 	if (m_Ball.y - ballRadius < -halfScreenHeight)
 	{
 		m_GameOver = true;
 		return;
 	}
 
-	// Paddle.
 	if (m_BallVelocityY < 0.0f && IntersectsCircleRect(m_Ball, m_Paddle))
 	{
 		m_Ball.y = m_Paddle.y + (m_Paddle.height * 0.5f) + ballRadius;
@@ -355,7 +374,6 @@ void ApplicationClass::UpdateGame(InputClass* input, float deltaTime)
 		}
 	}
 
-	// Mattoncini: tutti distrutti al primo colpo.
 	for (size_t i = 0; i < m_Bricks.size(); i++)
 	{
 		if (!m_Bricks[i].active)
@@ -367,7 +385,6 @@ void ApplicationClass::UpdateGame(InputClass* input, float deltaTime)
 		{
 			m_Bricks[i].active = false;
 
-			// Nel 25% dei casi il mattoncino distrutto rilascia un modificatore.
 			if ((rand() % 100) < MODIFIER_SPAWN_PERCENT)
 			{
 				SpawnModifier(m_Bricks[i].x, m_Bricks[i].y);
@@ -391,7 +408,6 @@ void ApplicationClass::UpdateGame(InputClass* input, float deltaTime)
 		}
 	}
 
-	// Se finisci i mattoncini, ripristina il livello per una nuova partita.
 	if (AreAllBricksDestroyed())
 	{
 		ResetBricks();
@@ -459,7 +475,6 @@ void ApplicationClass::UpdateModifiers(float deltaTime)
 
 void ApplicationClass::ApplyModifier(ModifierType type)
 {
-	// Durata casuale tra 5 e 10 secondi.
 	float duration = 5.0f + static_cast<float>(rand() % 6);
 
 	if (type == ModifierBigBall)
@@ -492,47 +507,27 @@ void ApplicationClass::ApplyModifier(ModifierType type)
 	}
 }
 
+void ApplicationClass::UpdateModifierTimer(ActiveModifier& modifier, ModifierType type, float deltaTime)
+{
+	if (!modifier.active)
+	{
+		return;
+	}
+
+	modifier.remainingTime -= deltaTime;
+
+	if (modifier.remainingTime <= 0.0f)
+	{
+		DisableModifier(type);
+	}
+}
+
 void ApplicationClass::UpdateActiveModifierTimers(float deltaTime)
 {
-	if (m_BigBallModifier.active)
-	{
-		m_BigBallModifier.remainingTime -= deltaTime;
-
-		if (m_BigBallModifier.remainingTime <= 0.0f)
-		{
-			DisableModifier(ModifierBigBall);
-		}
-	}
-
-	if (m_UpsideDownModifier.active)
-	{
-		m_UpsideDownModifier.remainingTime -= deltaTime;
-
-		if (m_UpsideDownModifier.remainingTime <= 0.0f)
-		{
-			DisableModifier(ModifierUpsideDown);
-		}
-	}
-
-	if (m_LongPaddleModifier.active)
-	{
-		m_LongPaddleModifier.remainingTime -= deltaTime;
-
-		if (m_LongPaddleModifier.remainingTime <= 0.0f)
-		{
-			DisableModifier(ModifierLongPaddle);
-		}
-	}
-
-	if (m_SpeedUpModifier.active)
-	{
-		m_SpeedUpModifier.remainingTime -= deltaTime;
-
-		if (m_SpeedUpModifier.remainingTime <= 0.0f)
-		{
-			DisableModifier(ModifierSpeedUp);
-		}
-	}
+	UpdateModifierTimer(m_BigBallModifier, ModifierBigBall, deltaTime);
+	UpdateModifierTimer(m_UpsideDownModifier, ModifierUpsideDown, deltaTime);
+	UpdateModifierTimer(m_LongPaddleModifier, ModifierLongPaddle, deltaTime);
+	UpdateModifierTimer(m_SpeedUpModifier, ModifierSpeedUp, deltaTime);
 }
 
 void ApplicationClass::DisableModifier(ModifierType type)
@@ -540,19 +535,16 @@ void ApplicationClass::DisableModifier(ModifierType type)
 	if (type == ModifierBigBall)
 	{
 		m_Ball.radius = BASE_BALL_RADIUS;
-		m_BigBallModifier.active = false;
-		m_BigBallModifier.remainingTime = 0.0f;
+		ResetModifier(m_BigBallModifier);
 	}
 	else if (type == ModifierUpsideDown)
 	{
-		m_UpsideDownModifier.active = false;
-		m_UpsideDownModifier.remainingTime = 0.0f;
+		ResetModifier(m_UpsideDownModifier);
 	}
 	else if (type == ModifierLongPaddle)
 	{
 		m_Paddle.width = BASE_PADDLE_WIDTH;
-		m_LongPaddleModifier.active = false;
-		m_LongPaddleModifier.remainingTime = 0.0f;
+		ResetModifier(m_LongPaddleModifier);
 	}
 	else if (type == ModifierSpeedUp)
 	{
@@ -572,8 +564,7 @@ void ApplicationClass::DisableModifier(ModifierType type)
 		m_BallVelocityX = BASE_BALL_VELOCITY_X * signX;
 		m_BallVelocityY = BASE_BALL_VELOCITY_Y * signY;
 
-		m_SpeedUpModifier.active = false;
-		m_SpeedUpModifier.remainingTime = 0.0f;
+		ResetModifier(m_SpeedUpModifier);
 	}
 }
 
@@ -581,32 +572,31 @@ XMFLOAT4 ApplicationClass::GetModifierColor(ModifierType type) const
 {
 	if (type == ModifierBigBall)
 	{
-		return XMFLOAT4(0.2f, 0.6f, 1.0f, 1.0f); // blu
+		return XMFLOAT4(0.2f, 0.6f, 1.0f, 1.0f);
 	}
 	else if (type == ModifierUpsideDown)
 	{
-		return XMFLOAT4(1.0f, 0.2f, 0.8f, 1.0f); // viola/rosa
+		return XMFLOAT4(1.0f, 0.2f, 0.8f, 1.0f);
 	}
 	else if (type == ModifierLongPaddle)
 	{
-		return XMFLOAT4(0.2f, 1.0f, 0.3f, 1.0f); // verde
+		return XMFLOAT4(0.2f, 1.0f, 0.3f, 1.0f);
 	}
 
-	return XMFLOAT4(1.0f, 0.25f, 0.15f, 1.0f); // rosso/arancio
-}
-
-bool ApplicationClass::Intersects(const RectObject& a, const RectObject& b) const
-{
-	return fabsf(a.x - b.x) * 2.0f < (a.width + b.width) &&
-		fabsf(a.y - b.y) * 2.0f < (a.height + b.height);
+	return XMFLOAT4(1.0f, 0.25f, 0.15f, 1.0f);
 }
 
 bool ApplicationClass::IntersectsCircleRect(const BallObject& ball, const RectObject& rect) const
 {
+	return IntersectsCircleRect(ball.x, ball.y, ball.radius, rect);
+}
+
+bool ApplicationClass::IntersectsCircleRect(float circleX, float circleY, float radius, const RectObject& rect) const
+{
 	float rectHalfWidth = rect.width * 0.5f;
 	float rectHalfHeight = rect.height * 0.5f;
 
-	float closestX = ball.x;
+	float closestX = circleX;
 
 	if (closestX < rect.x - rectHalfWidth)
 	{
@@ -617,7 +607,7 @@ bool ApplicationClass::IntersectsCircleRect(const BallObject& ball, const RectOb
 		closestX = rect.x + rectHalfWidth;
 	}
 
-	float closestY = ball.y;
+	float closestY = circleY;
 
 	if (closestY < rect.y - rectHalfHeight)
 	{
@@ -628,22 +618,15 @@ bool ApplicationClass::IntersectsCircleRect(const BallObject& ball, const RectOb
 		closestY = rect.y + rectHalfHeight;
 	}
 
-	float distanceX = ball.x - closestX;
-	float distanceY = ball.y - closestY;
+	float distanceX = circleX - closestX;
+	float distanceY = circleY - closestY;
 
-	return (distanceX * distanceX + distanceY * distanceY) <= (ball.radius * ball.radius);
+	return (distanceX * distanceX + distanceY * distanceY) <= (radius * radius);
 }
 
 bool ApplicationClass::IntersectsModifierPaddle(const ModifierObject& modifier, const RectObject& paddle) const
 {
-	BallObject tempBall;
-	tempBall.x = modifier.x;
-	tempBall.y = modifier.y;
-	tempBall.radius = modifier.radius;
-	tempBall.color = modifier.color;
-	tempBall.active = modifier.active;
-
-	return IntersectsCircleRect(tempBall, paddle);
+	return IntersectsCircleRect(modifier.x, modifier.y, modifier.radius, paddle);
 }
 
 bool ApplicationClass::AreAllBricksDestroyed() const
@@ -658,85 +641,61 @@ bool ApplicationClass::AreAllBricksDestroyed() const
 	return true;
 }
 
-bool ApplicationClass::RenderRect(const RectObject& rect, const XMMATRIX& viewMatrix, const XMMATRIX& orthoMatrix)
+XMMATRIX ApplicationClass::BuildWorldMatrix(float x, float y, float width, float height) const
+{
+	XMMATRIX worldMatrix = XMMatrixScaling(width, height, 1.0f) *
+		XMMatrixTranslation(x, y, 0.0f);
+
+	if (m_UpsideDownModifier.active)
+	{
+		worldMatrix = worldMatrix * XMMatrixRotationZ(XM_PI);
+	}
+
+	return worldMatrix;
+}
+
+bool ApplicationClass::RenderModel(ID3D11DeviceContext* deviceContext, ModelClass* model, int indexCount,
+	const XMFLOAT4& color, const XMMATRIX& worldMatrix, const XMMATRIX& viewMatrix, const XMMATRIX& orthoMatrix)
+{
+	if (!model->SetColor(deviceContext, color))
+	{
+		return false;
+	}
+
+	model->Render(deviceContext);
+	return m_ColorShader->Render(deviceContext, indexCount, worldMatrix, viewMatrix, orthoMatrix);
+}
+
+bool ApplicationClass::RenderRect(const RectObject& rect, ID3D11DeviceContext* deviceContext,
+	const XMMATRIX& viewMatrix, const XMMATRIX& orthoMatrix)
 {
 	if (!rect.active)
 	{
 		return true;
 	}
 
-	XMMATRIX worldMatrix = XMMatrixScaling(rect.width, rect.height, 1.0f) *
-		XMMatrixTranslation(rect.x, rect.y, 0.0f);
-
-	if (m_UpsideDownModifier.active)
-	{
-		worldMatrix = worldMatrix * XMMatrixRotationZ(XM_PI);
-	}
-
-	if (!m_RectModel->SetColor(m_Direct3D->GetDeviceContext(), rect.color))
-	{
-		return false;
-	}
-
-	m_RectModel->Render(m_Direct3D->GetDeviceContext());
-	return m_ColorShader->Render(m_Direct3D->GetDeviceContext(), m_RectModel->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix);
+	XMMATRIX worldMatrix = BuildWorldMatrix(rect.x, rect.y, rect.width, rect.height);
+	return RenderModel(deviceContext, m_RectModel, m_RectModel->GetIndexCount(), rect.color, worldMatrix, viewMatrix, orthoMatrix);
 }
 
-bool ApplicationClass::RenderBall(const BallObject& ball, const XMMATRIX& viewMatrix, const XMMATRIX& orthoMatrix)
+bool ApplicationClass::RenderCircle(float x, float y, float radius, const XMFLOAT4& color, bool active,
+	ID3D11DeviceContext* deviceContext, const XMMATRIX& viewMatrix, const XMMATRIX& orthoMatrix)
 {
-	if (!ball.active)
+	if (!active)
 	{
 		return true;
 	}
 
-	float diameter = ball.radius * 2.0f;
+	float diameter = radius * 2.0f;
 
-	XMMATRIX worldMatrix = XMMatrixScaling(diameter, diameter, 1.0f) *
-		XMMatrixTranslation(ball.x, ball.y, 0.0f);
-
-	if (m_UpsideDownModifier.active)
-	{
-		worldMatrix = worldMatrix * XMMatrixRotationZ(XM_PI);
-	}
-
-	if (!m_CircleModel->SetColor(m_Direct3D->GetDeviceContext(), ball.color))
-	{
-		return false;
-	}
-
-	m_CircleModel->Render(m_Direct3D->GetDeviceContext());
-	return m_ColorShader->Render(m_Direct3D->GetDeviceContext(), m_CircleModel->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix);
-}
-
-bool ApplicationClass::RenderModifier(const ModifierObject& modifier, const XMMATRIX& viewMatrix, const XMMATRIX& orthoMatrix)
-{
-	if (!modifier.active)
-	{
-		return true;
-	}
-
-	float diameter = modifier.radius * 2.0f;
-
-	XMMATRIX worldMatrix = XMMatrixScaling(diameter, diameter, 1.0f) *
-		XMMatrixTranslation(modifier.x, modifier.y, 0.0f);
-
-	if (m_UpsideDownModifier.active)
-	{
-		worldMatrix = worldMatrix * XMMatrixRotationZ(XM_PI);
-	}
-
-	if (!m_CircleModel->SetColor(m_Direct3D->GetDeviceContext(), modifier.color))
-	{
-		return false;
-	}
-
-	m_CircleModel->Render(m_Direct3D->GetDeviceContext());
-	return m_ColorShader->Render(m_Direct3D->GetDeviceContext(), m_CircleModel->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix);
+	XMMATRIX worldMatrix = BuildWorldMatrix(x, y, diameter, diameter);
+	return RenderModel(deviceContext, m_CircleModel, m_CircleModel->GetIndexCount(), color, worldMatrix, viewMatrix, orthoMatrix);
 }
 
 bool ApplicationClass::Render()
 {
 	XMMATRIX viewMatrix, orthoMatrix;
+	ID3D11DeviceContext* deviceContext;
 	bool result;
 
 	if (m_GameOver)
@@ -755,10 +714,11 @@ bool ApplicationClass::Render()
 	m_Camera->Render();
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetOrthoMatrix(orthoMatrix);
+	deviceContext = m_Direct3D->GetDeviceContext();
 
 	for (size_t i = 0; i < m_Bricks.size(); i++)
 	{
-		result = RenderRect(m_Bricks[i], viewMatrix, orthoMatrix);
+		result = RenderRect(m_Bricks[i], deviceContext, viewMatrix, orthoMatrix);
 		if (!result)
 		{
 			return false;
@@ -767,20 +727,22 @@ bool ApplicationClass::Render()
 
 	for (size_t i = 0; i < m_Modifiers.size(); i++)
 	{
-		result = RenderModifier(m_Modifiers[i], viewMatrix, orthoMatrix);
+		result = RenderCircle(m_Modifiers[i].x, m_Modifiers[i].y, m_Modifiers[i].radius, m_Modifiers[i].color,
+			m_Modifiers[i].active, deviceContext, viewMatrix, orthoMatrix);
 		if (!result)
 		{
 			return false;
 		}
 	}
 
-	result = RenderRect(m_Paddle, viewMatrix, orthoMatrix);
+	result = RenderRect(m_Paddle, deviceContext, viewMatrix, orthoMatrix);
 	if (!result)
 	{
 		return false;
 	}
 
-	result = RenderBall(m_Ball, viewMatrix, orthoMatrix);
+	result = RenderCircle(m_Ball.x, m_Ball.y, m_Ball.radius, m_Ball.color, m_Ball.active,
+		deviceContext, viewMatrix, orthoMatrix);
 	if (!result)
 	{
 		return false;
