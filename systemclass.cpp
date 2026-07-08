@@ -1,4 +1,5 @@
 #include "systemclass.h"
+#include "resource.h"
 
 namespace
 {
@@ -174,7 +175,7 @@ void SystemClass::InitializeWindows(int& screenWidth, int& screenHeight)
 	wc.cbClsExtra    = 0;
 	wc.cbWndExtra    = 0;
 	wc.hInstance     = m_hinstance;
-	wc.hIcon		 = LoadIcon(NULL, IDI_WINLOGO);
+	wc.hIcon		 = LoadIcon(m_hinstance, MAKEINTRESOURCE(IDI_APP_ICON));
 	wc.hIconSm       = wc.hIcon;
 	wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);

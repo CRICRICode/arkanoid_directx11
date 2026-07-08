@@ -3,6 +3,56 @@
 
 namespace
 {
+	const char COLOR_VERTEX_SHADER[] =
+R"(
+cbuffer MatrixBuffer
+{
+	matrix worldMatrix;
+	matrix viewMatrix;
+	matrix projectionMatrix;
+};
+
+struct VertexInputType
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+};
+
+struct PixelInputType
+{
+	float4 position : SV_POSITION;
+	float4 color : COLOR;
+};
+
+PixelInputType ColorVertexShader(VertexInputType input)
+{
+	PixelInputType output;
+
+	input.position.w = 1.0f;
+
+	output.position = mul(input.position, worldMatrix);
+	output.position = mul(output.position, viewMatrix);
+	output.position = mul(output.position, projectionMatrix);
+	output.color = input.color;
+
+	return output;
+}
+)";
+
+	const char COLOR_PIXEL_SHADER[] =
+R"(
+struct PixelInputType
+{
+	float4 position : SV_POSITION;
+	float4 color : COLOR;
+};
+
+float4 ColorPixelShader(PixelInputType input) : SV_TARGET
+{
+	return input.color;
+}
+)";
+
 	template <typename T>
 	void SafeRelease(T*& resource)
 	{
@@ -31,24 +81,8 @@ ColorShaderClass::~ColorShaderClass()
 bool ColorShaderClass::Initialize(ID3D11Device* device, HWND hwnd)
 {
 	bool result;
-	wchar_t vsFilename[128];
-	wchar_t psFilename[128];
-	int error;
 
-
-	error = wcscpy_s(vsFilename, 128, L"../color.vs");
-	if(error != 0)
-	{
-		return false;
-	}
-
-	error = wcscpy_s(psFilename, 128, L"../color.ps");
-	if(error != 0)
-	{
-		return false;
-	}
-
-	result = InitializeShader(device, hwnd, vsFilename, psFilename);
+	result = InitializeShader(device, hwnd);
 	if(!result)
 	{
 		return false;
@@ -84,7 +118,7 @@ bool ColorShaderClass::Render(ID3D11DeviceContext* deviceContext, int indexCount
 }
 
 
-bool ColorShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, const WCHAR* vsFilename, const WCHAR* psFilename)
+bool ColorShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd)
 {
 	HRESULT result;
 	ID3D10Blob* errorMessage;
@@ -99,33 +133,25 @@ bool ColorShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, const W
 	vertexShaderBuffer = 0;
 	pixelShaderBuffer = 0;
 
-	result = D3DCompileFromFile(vsFilename, NULL, NULL, "ColorVertexShader", "vs_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0,
-								&vertexShaderBuffer, &errorMessage);
+	result = D3DCompile(COLOR_VERTEX_SHADER, sizeof(COLOR_VERTEX_SHADER) - 1, "EmbeddedColorVertexShader", NULL, NULL,
+						"ColorVertexShader", "vs_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &vertexShaderBuffer, &errorMessage);
 	if(FAILED(result))
 	{
 		if(errorMessage)
 		{
-			OutputShaderErrorMessage(errorMessage, hwnd, vsFilename);
-		}
-		else
-		{
-			MessageBox(hwnd, vsFilename, L"Missing Shader File", MB_OK);
+			OutputShaderErrorMessage(errorMessage, hwnd, L"EmbeddedColorVertexShader");
 		}
 
 		return false;
 	}
 
-	result = D3DCompileFromFile(psFilename, NULL, NULL, "ColorPixelShader", "ps_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0,
-								&pixelShaderBuffer, &errorMessage);
+	result = D3DCompile(COLOR_PIXEL_SHADER, sizeof(COLOR_PIXEL_SHADER) - 1, "EmbeddedColorPixelShader", NULL, NULL,
+						"ColorPixelShader", "ps_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, &pixelShaderBuffer, &errorMessage);
 	if(FAILED(result))
 	{
 		if(errorMessage)
 		{
-			OutputShaderErrorMessage(errorMessage, hwnd, psFilename);
-		}
-		else
-		{
-			MessageBox(hwnd, psFilename, L"Missing Shader File", MB_OK);
+			OutputShaderErrorMessage(errorMessage, hwnd, L"EmbeddedColorPixelShader");
 		}
 
 		SafeRelease(vertexShaderBuffer);
