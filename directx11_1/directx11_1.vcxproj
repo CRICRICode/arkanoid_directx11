@@ -144,11 +144,18 @@
     <ClInclude Include="..\d3dclass.h" />
     <ClInclude Include="..\inputclass.h" />
     <ClInclude Include="..\modelclass.h" />
+    <ClInclude Include="..\resource.h" />
     <ClInclude Include="..\systemclass.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\arkanoid.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\color.ps" />
     <None Include="..\color.vs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\arkanoid.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
