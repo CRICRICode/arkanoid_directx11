@@ -1,5 +1,7 @@
 
-# Arkanoid DirectX 11
+
+
+# Arkanoid DirectX 11 [![Latest Release](https://img.shields.io/github/v/release/CRICRICode/arkanoid_directx11?label=download)](https://github.com/CRICRICode/arkanoid_directx11/releases/latest)
 
 A simplified Arkanoid-style game developed in C++ with DirectX 11 for the Graphics course.
 
