@@ -168,7 +168,7 @@ void SystemClass::InitializeWindows(int& screenWidth, int& screenHeight)
 
 	m_hinstance = GetModuleHandle(NULL);
 
-	m_applicationName = L"Engine";
+	m_applicationName = L"Arkanoid";
 
 	wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	wc.lpfnWndProc   = WndProc;
